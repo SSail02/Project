@@ -1,1 +1,13 @@
-package com.innovatus.studentrecords.view; import javax.swing.*; import java.awt.*; abstract class BaseFrame extends JFrame {BaseFrame(String title){super(title);setDefaultCloseOperation(EXIT_ON_CLOSE);setSize(760,500);setLocationRelativeTo(null);getContentPane().setBackground(Color.WHITE);} JButton button(String s){JButton b=new JButton(s);b.setBackground(new Color(28,105,190));b.setForeground(Color.WHITE);return b;}}
+package com.innovatus.studentrecords.view;
+
+import java.awt.Color;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+
+abstract class BaseFrame extends JFrame {
+    BaseFrame(String title) {
+        super(title); setDefaultCloseOperation(EXIT_ON_CLOSE); setSize(820, 540); setLocationRelativeTo(null);
+        getContentPane().setBackground(Color.WHITE);
+    }
+    JButton button(String text) { return new JButton(text); }
+}

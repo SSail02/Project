@@ -1,3 +1,26 @@
 package com.innovatus.studentrecords.dao;
-import com.innovatus.studentrecords.config.DBConnection; import com.innovatus.studentrecords.model.User; import java.sql.*; import java.util.*;
-public class UserDAO { private User map(ResultSet r)throws SQLException{return new User(r.getInt("user_id"),r.getString("username"),r.getString("email"),r.getString("password_hash"),r.getString("department"));} public Optional<User> findByUsername(String n)throws SQLException{return find("SELECT * FROM users WHERE username=?",n);} public Optional<User> findByEmail(String e)throws SQLException{return find("SELECT * FROM users WHERE email=?",e);} private Optional<User> find(String q,String x)throws SQLException{try(Connection c=DBConnection.getConnection();PreparedStatement p=c.prepareStatement(q)){p.setString(1,x);try(ResultSet r=p.executeQuery()){return r.next()?Optional.of(map(r)):Optional.empty();}}} public User create(String n,String e,String h,String d)throws SQLException{try(Connection c=DBConnection.getConnection();PreparedStatement p=c.prepareStatement("INSERT INTO users(username,email,password_hash,department) VALUES(?,?,?,?)",Statement.RETURN_GENERATED_KEYS)){p.setString(1,n);p.setString(2,e);p.setString(3,h);p.setString(4,d);p.executeUpdate();try(ResultSet r=p.getGeneratedKeys()){r.next();return new User(r.getInt(1),n,e,h,d);}}} public void updatePassword(String e,String h)throws SQLException{try(Connection c=DBConnection.getConnection();PreparedStatement p=c.prepareStatement("UPDATE users SET password_hash=? WHERE email=?")){p.setString(1,h);p.setString(2,e);if(p.executeUpdate()!=1)throw new SQLException("User was not found");}} }
+
+import com.innovatus.studentrecords.config.DBConnection;
+import com.innovatus.studentrecords.model.User;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Optional;
+
+/** Database operations for the simple college login. */
+public class UserDAO {
+    public Optional<User> login(String username, String password) throws SQLException {
+        String sql = "SELECT user_id, username, password FROM users WHERE username = ? AND password = ?";
+        try (var connection = DBConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, username.trim());
+            statement.setString(2, password);
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next()
+                        ? Optional.of(new User(result.getInt("user_id"), result.getString("username"),
+                                result.getString("password")))
+                        : Optional.empty();
+            }
+        }
+    }
+}

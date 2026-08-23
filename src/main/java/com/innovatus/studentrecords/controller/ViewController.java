@@ -1,1 +1,0 @@
-package com.innovatus.studentrecords.controller; import com.innovatus.studentrecords.dao.StudentDAO; import com.innovatus.studentrecords.model.Student; import java.util.*; public class ViewController {public List<Student> find(int u,String q,String d,String y,String b,String s)throws Exception{return new StudentDAO().find(u,q,d,y,b,s);}}
