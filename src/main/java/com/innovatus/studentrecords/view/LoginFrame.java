@@ -1,1 +1,38 @@
-package com.innovatus.studentrecords.view; import com.innovatus.studentrecords.controller.AuthController; import com.innovatus.studentrecords.utils.DialogUtil; import javax.swing.*; import java.awt.*; public class LoginFrame extends BaseFrame {public LoginFrame(){super("College Login");JPanel p=new JPanel(new GridLayout(0,2,10,10));p.setBorder(BorderFactory.createEmptyBorder(90,180,90,180));JTextField u=new JTextField();JPasswordField pw=new JPasswordField();p.add(new JLabel("College Username"));p.add(u);p.add(new JLabel("Password"));p.add(pw);JButton in=button("Login"),up=button("Sign Up"),forgot=button("Forgot Password");p.add(in);p.add(up);p.add(forgot);add(p);in.addActionListener(e->{try{new AuthController().login(u.getText(),new String(pw.getPassword()));dispose();new DashboardFrame().setVisible(true);}catch(Exception x){DialogUtil.error(this,x.getMessage());}});up.addActionListener(e->{dispose();new SignupFrame().setVisible(true);});forgot.addActionListener(e->{dispose();new ForgotPasswordFrame().setVisible(true);});}}
+package com.innovatus.studentrecords.view;
+
+import com.innovatus.studentrecords.dao.UserDAO;
+import com.innovatus.studentrecords.utils.DialogUtil;
+import com.innovatus.studentrecords.utils.Validator;
+import java.awt.GridLayout;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
+
+/** First screen: validates a college username and password. */
+public class LoginFrame extends BaseFrame {
+    public LoginFrame() {
+        super("College Student Database - Login");
+        JPanel panel = new JPanel(new GridLayout(0, 2, 10, 12));
+        panel.setBorder(BorderFactory.createEmptyBorder(110, 190, 110, 190));
+        JTextField username = new JTextField(); JPasswordField password = new JPasswordField();
+        JButton login = button("Login");
+        panel.add(new JLabel("Username:")); panel.add(username);
+        panel.add(new JLabel("Password:")); panel.add(password);
+        panel.add(new JLabel()); panel.add(login); add(panel);
+        login.addActionListener(event -> login(username.getText(), new String(password.getPassword())));
+    }
+    private void login(String username, String password) {
+        if (Validator.isBlank(username) || Validator.isBlank(password)) {
+            DialogUtil.error(this, "Username and password cannot be empty."); return;
+        }
+        try {
+            if (new UserDAO().login(username, password).isEmpty()) {
+                DialogUtil.error(this, "Invalid username or password."); return;
+            }
+            dispose(); new DashboardFrame(username.trim()).setVisible(true);
+        } catch (Exception exception) { DialogUtil.error(this, "Unable to login: " + exception.getMessage()); }
+    }
+}

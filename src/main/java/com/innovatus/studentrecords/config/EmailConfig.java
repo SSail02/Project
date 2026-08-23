@@ -1,2 +1,0 @@
-package com.innovatus.studentrecords.config;
-public final class EmailConfig { private EmailConfig(){} public static String host(){return System.getenv().getOrDefault("SRM_SMTP_HOST", "smtp.gmail.com");} public static int port(){return Integer.parseInt(System.getenv().getOrDefault("SRM_SMTP_PORT","587"));} public static String username(){return System.getenv().getOrDefault("SRM_SMTP_USERNAME","");} public static String appPassword(){return System.getenv().getOrDefault("SRM_SMTP_APP_PASSWORD","");} }

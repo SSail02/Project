@@ -1,1 +1,38 @@
-package com.innovatus.studentrecords.view; import com.innovatus.studentrecords.controller.UploadController; import com.innovatus.studentrecords.model.Student; import com.innovatus.studentrecords.service.SessionManager; import com.innovatus.studentrecords.utils.DialogUtil; import javax.swing.*; import java.awt.BorderLayout; import java.io.*; import java.util.List; public class UploadFrame extends BaseFrame {public UploadFrame(){super("Upload Excel Records");JButton choose=button("Choose Excel File"),save=button("Save Validated Records");JTextArea preview=new JTextArea();add(new JScrollPane(preview),BorderLayout.CENTER);JPanel p=new JPanel();p.add(choose);p.add(save);add(p,BorderLayout.SOUTH);final File[] f=new File[1];final List<Student>[] rows=new List[]{null};choose.addActionListener(e->{JFileChooser c=new JFileChooser();if(c.showOpenDialog(this)==JFileChooser.APPROVE_OPTION)try{f[0]=c.getSelectedFile();rows[0]=new UploadController().preview(f[0],SessionManager.user().id());preview.setText(rows[0].stream().limit(5).map(Object::toString).reduce("",(a,b)->a+b+"\n"));}catch(Exception x){DialogUtil.error(this,x.getMessage());}});save.addActionListener(e->{try{if(rows[0]==null)throw new IllegalArgumentException("Choose and validate a file first.");new UploadController().save(f[0],rows[0]);DialogUtil.info(this,"Uploaded "+rows[0].size()+" records.");}catch(Exception x){DialogUtil.error(this,x.getMessage());}});}}
+package com.innovatus.studentrecords.view;
+
+import com.innovatus.studentrecords.dao.StudentDAO;
+import com.innovatus.studentrecords.model.Student;
+import com.innovatus.studentrecords.service.ExcelService;
+import com.innovatus.studentrecords.utils.DialogUtil;
+import java.awt.BorderLayout;
+import java.io.File;
+import java.util.List;
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+/** Imports a validated Excel file into MySQL. */
+public class UploadFrame extends BaseFrame {
+    private final String username;
+    public UploadFrame(String username) {
+        super("Upload Student Records"); this.username = username;
+        JButton choose = button("Select Excel File and Import"); JButton back = button("Back to Dashboard");
+        JPanel panel = new JPanel(); panel.add(new JLabel("Required columns: Roll No, Name, Department, Year, Batch, Semester, Mobile, Email"));
+        panel.add(choose); panel.add(back); add(panel, BorderLayout.CENTER);
+        choose.addActionListener(event -> selectAndImport());
+        back.addActionListener(event -> { dispose(); new DashboardFrame(username).setVisible(true); });
+    }
+    private void selectAndImport() {
+        JFileChooser chooser = new JFileChooser();
+        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
+        File file = chooser.getSelectedFile();
+        try {
+            List<Student> students = new ExcelService().readExcel(file); StudentDAO dao = new StudentDAO();
+            for (Student student : students) if (dao.isRollNumberExists(student.rollNo()))
+                throw new IllegalArgumentException("Roll number already exists in database: " + student.rollNo());
+            for (Student student : students) dao.insertStudent(student);
+            DialogUtil.info(this, students.size() + " student records imported successfully.");
+        } catch (Exception exception) { DialogUtil.error(this, exception.getMessage()); }
+    }
+}

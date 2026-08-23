@@ -1,2 +1,54 @@
-package com.innovatus.studentrecords.service; import com.innovatus.studentrecords.model.Student; import com.innovatus.studentrecords.utils.Validator; import org.apache.poi.ss.usermodel.*; import org.apache.poi.ss.usermodel.WorkbookFactory; import org.apache.poi.xssf.usermodel.XSSFWorkbook; import java.io.*; import java.nio.file.*; import java.util.*;
-public class ExcelService {private static final List<String> H=List.of("Roll Number","Student Name","Department","Year","Batch","Semester","Mobile","Email"); public List<Student> read(File f,int owner)throws Exception{if(!f.getName().matches("(?i).*\\.(xlsx|xls)$"))throw new IllegalArgumentException("Select an .xlsx or .xls file.");try(InputStream in=new FileInputStream(f);Workbook w=WorkbookFactory.create(in)){Sheet sh=w.getSheetAt(0);DataFormatter df=new DataFormatter();Row head=sh.getRow(0);if(head==null)throw new IllegalArgumentException("Missing header row.");for(int i=0;i<H.size();i++)if(!H.get(i).equalsIgnoreCase(df.formatCellValue(head.getCell(i)).trim()))throw new IllegalArgumentException("Required column missing: "+H.get(i));List<Student> out=new ArrayList<>();Set<String> rolls=new HashSet<>();for(int r=1;r<=sh.getLastRowNum();r++){Row row=sh.getRow(r);if(row==null)continue;List<String> v=new ArrayList<>();for(int i=0;i<8;i++)v.add(df.formatCellValue(row.getCell(i)).trim());if(v.stream().allMatch(String::isEmpty))continue;if(v.stream().anyMatch(String::isEmpty))throw new IllegalArgumentException("Empty cell in row "+(r+1));if(!Validator.email(v.get(7))||!Validator.year(v.get(3)))throw new IllegalArgumentException("Invalid email or year in row "+(r+1));if(!rolls.add(v.get(0)))throw new IllegalArgumentException("Duplicate roll number in file: "+v.get(0));out.add(new Student(0,v.get(0),v.get(1),v.get(2),v.get(3),v.get(4),v.get(5),v.get(6),v.get(7),owner));}if(out.isEmpty())throw new IllegalArgumentException("The sheet contains no records.");return out;}} public Path write(List<Student>s)throws Exception{Path f=Files.createTempFile("student-records-", ".xlsx");try(Workbook w=new XSSFWorkbook();OutputStream o=Files.newOutputStream(f)){Sheet sh=w.createSheet("Students");Row h=sh.createRow(0);for(int i=0;i<H.size();i++)h.createCell(i).setCellValue(H.get(i));int row=1;for(Student x:s){Row r=sh.createRow(row++);String[] a={x.rollNo(),x.name(),x.department(),x.year(),x.batch(),x.semester(),x.mobile(),x.email()};for(int i=0;i<a.length;i++)r.createCell(i).setCellValue(a[i]);}for(int i=0;i<H.size();i++)sh.autoSizeColumn(i);w.write(o);}return f;}}
+package com.innovatus.studentrecords.service;
+
+import com.innovatus.studentrecords.model.Student;
+import com.innovatus.studentrecords.utils.Validator;
+import java.io.File;
+import java.io.FileInputStream;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+
+/** Reads and validates the required eight-column student Excel sheet. */
+public class ExcelService {
+    private static final List<String> HEADERS = List.of("Roll No", "Name", "Department", "Year", "Batch", "Semester", "Mobile", "Email");
+
+    public List<Student> readExcel(File file) throws Exception {
+        if (file == null || !file.getName().matches("(?i).*\\.(xlsx|xls)$"))
+            throw new IllegalArgumentException("Please select an Excel (.xlsx or .xls) file.");
+        try (FileInputStream input = new FileInputStream(file); Workbook workbook = WorkbookFactory.create(input)) {
+            Sheet sheet = workbook.getSheetAt(0); DataFormatter formatter = new DataFormatter();
+            validateHeaders(sheet.getRow(0), formatter);
+            List<Student> students = new ArrayList<>(); Set<String> rollNumbers = new HashSet<>();
+            for (int rowIndex = 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+                Row row = sheet.getRow(rowIndex);
+                if (row == null) continue;
+                String[] values = new String[8];
+                for (int column = 0; column < values.length; column++) values[column] = formatter.formatCellValue(row.getCell(column)).trim();
+                if (allBlank(values)) continue;
+                if (hasBlank(values)) throw new IllegalArgumentException("Empty cell found in row " + (rowIndex + 1) + ".");
+                if (!Validator.isValidEmail(values[7])) throw new IllegalArgumentException("Invalid email in row " + (rowIndex + 1) + ".");
+                if (!rollNumbers.add(values[0])) throw new IllegalArgumentException("Duplicate roll number in Excel: " + values[0]);
+                students.add(new Student(0, values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7]));
+            }
+            if (students.isEmpty()) throw new IllegalArgumentException("The Excel sheet has no student records.");
+            return students;
+        }
+    }
+
+    private void validateHeaders(Row header, DataFormatter formatter) {
+        if (header == null) throw new IllegalArgumentException("Excel header row is missing.");
+        for (int column = 0; column < HEADERS.size(); column++) {
+            String actual = formatter.formatCellValue(header.getCell(column)).trim();
+            if (!HEADERS.get(column).equalsIgnoreCase(actual))
+                throw new IllegalArgumentException("Column " + (column + 1) + " must be \"" + HEADERS.get(column) + "\".");
+        }
+    }
+    private boolean allBlank(String[] values) { for (String value : values) if (!value.isEmpty()) return false; return true; }
+    private boolean hasBlank(String[] values) { for (String value : values) if (Validator.isBlank(value)) return true; return false; }
+}

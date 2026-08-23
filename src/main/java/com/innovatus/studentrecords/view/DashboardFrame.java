@@ -1,1 +1,22 @@
-package com.innovatus.studentrecords.view; import com.innovatus.studentrecords.controller.DashboardController; import com.innovatus.studentrecords.service.SessionManager; import com.innovatus.studentrecords.utils.*; import javax.swing.*; import java.awt.*; public class DashboardFrame extends BaseFrame {public DashboardFrame(){super("Student Records Dashboard");var u=SessionManager.user();JPanel p=new JPanel(new GridLayout(0,1,10,10));p.setBorder(BorderFactory.createEmptyBorder(35,80,35,80));p.add(new JLabel("Welcome, "+u.username()));p.add(new JLabel("Department: "+u.department()));JLabel stats=new JLabel();p.add(stats);try{stats.setText("Total Students Uploaded: "+new DashboardController().count(u.id()));}catch(Exception e){stats.setText("Total Students: unavailable");}for(Object[] x:new Object[][]{{"Upload Records",new UploadFrame()},{"View Records",new ViewRecordsFrame()},{"Download Records",new DownloadFrame()}}){JButton b=button((String)x[0]);p.add(b);b.addActionListener(e->{dispose();((JFrame)x[1]).setVisible(true);});}JButton out=button("Logout");p.add(out);out.addActionListener(e->{SessionManager.clear();dispose();new LoginFrame().setVisible(true);});add(p);}}
+package com.innovatus.studentrecords.view;
+
+import java.awt.GridLayout;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+/** Minimal post-login navigation screen. */
+public class DashboardFrame extends BaseFrame {
+    public DashboardFrame(String username) {
+        super("College Student Database - Dashboard");
+        JPanel panel = new JPanel(new GridLayout(0, 1, 12, 12));
+        panel.setBorder(BorderFactory.createEmptyBorder(90, 220, 90, 220));
+        JLabel welcome = new JLabel("Welcome " + username, JLabel.CENTER);
+        JButton upload = button("Upload Records"), view = button("View Records"), logout = button("Logout");
+        panel.add(welcome); panel.add(upload); panel.add(view); panel.add(logout); add(panel);
+        upload.addActionListener(event -> { dispose(); new UploadFrame(username).setVisible(true); });
+        view.addActionListener(event -> { dispose(); new ViewRecordsFrame(username).setVisible(true); });
+        logout.addActionListener(event -> { dispose(); new LoginFrame().setVisible(true); });
+    }
+}

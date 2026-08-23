@@ -1,3 +1,74 @@
 package com.innovatus.studentrecords.dao;
-import com.innovatus.studentrecords.config.DBConnection; import com.innovatus.studentrecords.model.Student; import java.sql.*; import java.util.*;
-public class StudentDAO { private Student map(ResultSet r)throws SQLException{return new Student(r.getInt("student_id"),r.getString("roll_no"),r.getString("name"),r.getString("department"),r.getString("year"),r.getString("batch"),r.getString("semester"),r.getString("mobile"),r.getString("email"),r.getInt("uploaded_by"));} public int count(int user)throws SQLException{try(Connection c=DBConnection.getConnection();PreparedStatement p=c.prepareStatement("SELECT COUNT(*) FROM students WHERE uploaded_by=?")){p.setInt(1,user);try(ResultSet r=p.executeQuery()){r.next();return r.getInt(1);}}} public void insertAll(List<Student> ss)throws SQLException{if(ss.isEmpty())return;try(Connection c=DBConnection.getConnection();PreparedStatement p=c.prepareStatement("INSERT INTO students(roll_no,name,department,year,batch,semester,mobile,email,uploaded_by) VALUES(?,?,?,?,?,?,?,?,?)")){for(Student s:ss){p.setString(1,s.rollNo());p.setString(2,s.name());p.setString(3,s.department());p.setString(4,s.year());p.setString(5,s.batch());p.setString(6,s.semester());p.setString(7,s.mobile());p.setString(8,s.email());p.setInt(9,s.uploadedBy());p.addBatch();}p.executeBatch();}} public List<Student> find(int user,String q,String dep,String year,String batch,String sem)throws SQLException{String sql="SELECT * FROM students WHERE uploaded_by=? AND (?='' OR roll_no LIKE ? OR name LIKE ?) AND (?='' OR department=?) AND (?='' OR year=?) AND (?='' OR batch=?) AND (?='' OR semester=?) ORDER BY name";try(Connection c=DBConnection.getConnection();PreparedStatement p=c.prepareStatement(sql)){String like="%"+q+"%";int i=1;p.setInt(i++,user);p.setString(i++,q);p.setString(i++,like);p.setString(i++,like);for(String x:List.of(dep,year,batch,sem)){p.setString(i++,x);p.setString(i++,x);}try(ResultSet r=p.executeQuery()){List<Student> out=new ArrayList<>();while(r.next())out.add(map(r));return out;}}} }
+
+import com.innovatus.studentrecords.config.DBConnection;
+import com.innovatus.studentrecords.model.Student;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+/** JDBC CRUD-read operations for student records. */
+public class StudentDAO {
+    public void insertStudent(Student student) throws SQLException {
+        String sql = "INSERT INTO students (roll_no, name, department, year, batch, semester, mobile, email) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        try (var connection = DBConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            setStudentValues(statement, student);
+            statement.executeUpdate();
+        }
+    }
+
+    public boolean isRollNumberExists(String rollNo) throws SQLException {
+        try (var connection = DBConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement("SELECT 1 FROM students WHERE roll_no = ?")) {
+            statement.setString(1, rollNo);
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next();
+            }
+        }
+    }
+
+    public List<Student> getAllStudents() throws SQLException {
+        return filterStudents("", "", "");
+    }
+
+    public List<Student> searchStudents(String searchText) throws SQLException {
+        return filterStudents(searchText, "", "");
+    }
+
+    public List<Student> filterStudents(String searchText, String department, String year) throws SQLException {
+        String sql = "SELECT * FROM students WHERE (? = '' OR roll_no LIKE ? OR name LIKE ?) "
+                + "AND (? = '' OR department = ?) AND (? = '' OR year = ?) ORDER BY name, roll_no";
+        try (var connection = DBConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            String search = searchText == null ? "" : searchText.trim();
+            String like = "%" + search + "%";
+            statement.setString(1, search);
+            statement.setString(2, like);
+            statement.setString(3, like);
+            statement.setString(4, department == null ? "" : department);
+            statement.setString(5, department == null ? "" : department);
+            statement.setString(6, year == null ? "" : year);
+            statement.setString(7, year == null ? "" : year);
+            try (ResultSet result = statement.executeQuery()) {
+                List<Student> students = new ArrayList<>();
+                while (result.next()) students.add(mapStudent(result));
+                return students;
+            }
+        }
+    }
+
+    private void setStudentValues(PreparedStatement statement, Student student) throws SQLException {
+        statement.setString(1, student.rollNo()); statement.setString(2, student.name());
+        statement.setString(3, student.department()); statement.setString(4, student.year());
+        statement.setString(5, student.batch()); statement.setString(6, student.semester());
+        statement.setString(7, student.mobile()); statement.setString(8, student.email());
+    }
+
+    private Student mapStudent(ResultSet result) throws SQLException {
+        return new Student(result.getInt("student_id"), result.getString("roll_no"), result.getString("name"),
+                result.getString("department"), result.getString("year"), result.getString("batch"),
+                result.getString("semester"), result.getString("mobile"), result.getString("email"));
+    }
+}

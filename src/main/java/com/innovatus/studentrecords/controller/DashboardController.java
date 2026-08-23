@@ -1,1 +1,0 @@
-package com.innovatus.studentrecords.controller; import com.innovatus.studentrecords.dao.*; import com.innovatus.studentrecords.model.UploadHistory; import java.util.*; public class DashboardController {public int count(int u)throws Exception{return new StudentDAO().count(u);}public List<UploadHistory> recent(int u)throws Exception{return new UploadHistoryDAO().recent(u);}}
