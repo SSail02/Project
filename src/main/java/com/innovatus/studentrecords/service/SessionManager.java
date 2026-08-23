@@ -1,0 +1,1 @@
+package com.innovatus.studentrecords.service; import com.innovatus.studentrecords.model.User; public final class SessionManager {private static User user; private SessionManager(){} public static void start(User u){user=u;} public static User user(){return user;} public static void clear(){user=null;}}
